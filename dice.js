@@ -72,13 +72,13 @@ function Hand() {
 
     this.getScore = function(hand) {
         if (this.kind(hand, 5)) {
-            return [this.handTypes.FIVE_OF_A_this.kind, this.kind(hand, 5)]; 
+            return [this.handTypes.FIVE_OF_A_KIND, this.kind(hand, 5)]; 
         } else if (this.kind(hand, 4)) {
-            return [this.handTypes.FOUR_OF_A_this.kind, this.kind(hand, 4), this.kind(hand, 1)];
+            return [this.handTypes.FOUR_OF_A_KIND, this.kind(hand, 4), this.kind(hand, 1)];
         } else if (this.kind(hand, 3) && this.kind(hand, 2)) {
             return [this.handTypes.FULL_HOUSE, this.kind(hand, 3), this.kind(hand, 2)];
         } else if (this.kind(hand, 3)) {
-            return [this.handTypes.THREE_OF_A_this.kind, this.kind(hand, 3), Math.max.apply(Math, this.kind(hand, 1)), Math.min.apply(Math, this.kind(hand, 1))];
+            return [this.handTypes.THREE_OF_A_KIND, this.kind(hand, 3), Math.max.apply(Math, this.kind(hand, 1)), Math.min.apply(Math, this.kind(hand, 1))];
         } else if (Object.prototype.toString.call(this.kind(hand, 2)) === '[object Array]') {
             return [this.handTypes.TWO_PAIR, Math.max.apply(Math, this.kind(hand, 2)), Math.max.apply(Math, this.kind(hand, 2))];
         } else if (this.kind(hand, 2)) {
@@ -119,6 +119,6 @@ function Hand() {
         return newHand;
     }
 
-};
+}
 
 
