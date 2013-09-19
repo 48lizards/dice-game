@@ -138,7 +138,7 @@ var HandTextView = {
             if (Math.max.apply(Math, Hand.kind(hand, 1)) == Die.sideNames.ACE) {
                 return 'Three ' + this.sideNames[Hand.kind(hand, 3)] + 's and an ' + this.sideNames[Math.max.apply(Math, Hand.kind(hand, 1))];
             } else {
-                return 'Three ' + this.sideNames[Hand.kind(hand, 3)] + 's and a ' + this.sideNames[Hand.kind(hand, 1)];
+                return 'Three ' + this.sideNames[Hand.kind(hand, 3)] + 's and a ' + this.sideNames[Math.max.apply(Math, Hand.kind(hand, 1))];
             }
         } else if (Object.prototype.toString.call(Hand.kind(hand, 2)) === '[object Array]') {
             return this.sideNames[Math.max.apply(Math, Hand.kind(hand, 2))] + 's and ' + this.sideNames[Math.min.apply(Math, Hand.kind(hand, 2))] + 's';
