@@ -71,17 +71,17 @@ var Hand = {
     },
 
     getScore : function(hand) {
-        if (this.kind(hand, 5)) {
+        if (this.kind(hand, 5) !== false) {
             return [this.handTypes.FIVE_OF_A_KIND, this.kind(hand, 5)]; 
-        } else if (this.kind(hand, 4)) {
+        } else if (this.kind(hand, 4) !== false) {
             return [this.handTypes.FOUR_OF_A_KIND, this.kind(hand, 4), this.kind(hand, 1)];
-        } else if (this.kind(hand, 3) && this.kind(hand, 2)) {
+        } else if (this.kind(hand, 3) !== false && this.kind(hand, 2) !== false) {
             return [this.handTypes.FULL_HOUSE, this.kind(hand, 3), this.kind(hand, 2)];
-        } else if (this.kind(hand, 3)) {
+        } else if (this.kind(hand, 3) !== false) {
             return [this.handTypes.THREE_OF_A_KIND, this.kind(hand, 3), Math.max.apply(Math, this.kind(hand, 1)), Math.min.apply(Math, this.kind(hand, 1))];
         } else if (Object.prototype.toString.call(this.kind(hand, 2)) === '[object Array]') {
             return [this.handTypes.TWO_PAIR, Math.max.apply(Math, this.kind(hand, 2)), Math.min.apply(Math, this.kind(hand, 2))];
-        } else if (this.kind(hand, 2)) {
+        } else if (this.kind(hand, 2) !== false) {
             return [this.handTypes.PAIR, this.kind(hand, 2)];
         } else {
             return [this.handTypes.NOTHING];
@@ -106,17 +106,17 @@ var Hand = {
     },
 
     reroll : function(hand, dieNum) {
-        var newHand = hand.slice(0);
-        newHand[dieNum] = Die.getRolledDie(true, hand[dieNum].isUnderCup);
-        return newHand;
+        if (!hand[dieNum].hasBeenRolledThisTurn) {
+            hand[dieNum] = Die.getRolledDie(true, hand[dieNum].isUnderCup);
+        }
+        return hand;
     },
 
     resetRolls : function(hand) {
-        var newHand = [];
         for (var i = 0; i < hand.length; i++) {
-            newHand.append(Die.getDie(hand[i].sideFacingUp, false, hand[i].isUnderCup));
+            hand[i].hasBeenRolledThisTurn = false;
         }
-        return newHand;
+        return hand;
     },
 }
 
@@ -124,17 +124,17 @@ var HandTextView = {
     sideNames : ['9', '10', 'J', 'Q', 'K', 'A'],
 
     getDescription : function(hand) {
-        if (Hand.kind(hand, 5)) {
+        if (Hand.kind(hand, 5) !== false) {
             return 'Five ' + this.sideNames[Hand.kind(hand, 5)] + 's';
-        } else if (Hand.kind(hand, 4)) {
+        } else if (Hand.kind(hand, 4) !== false) {
             if (Hand.kind(hand, 1) == Die.sideNames.ACE) {
                 return 'Four ' + this.sideNames[Hand.kind(hand, 4)] + 's and an ' + this.sideNames[Hand.kind(hand, 1)];
             } else {
                 return 'Four ' + this.sideNames[Hand.kind(hand, 4)] + 's and a ' + this.sideNames[Hand.kind(hand, 1)];
             }
-        } else if (Hand.kind(hand, 3) && Hand.kind(hand, 2)) {
+        } else if (Hand.kind(hand, 3) !== false && Hand.kind(hand, 2) !== false) {
             return this.sideNames[Hand.kind(hand, 3)] + 's full of ' + this.sideNames[Hand.kind(hand, 2)] + 's';
-        } else if (Hand.kind(hand, 3)) {
+        } else if (Hand.kind(hand, 3) !== false) {
             if (Math.max.apply(Math, Hand.kind(hand, 1)) == Die.sideNames.ACE) {
                 return 'Three ' + this.sideNames[Hand.kind(hand, 3)] + 's and an ' + this.sideNames[Math.max.apply(Math, Hand.kind(hand, 1))];
             } else {
@@ -142,7 +142,7 @@ var HandTextView = {
             }
         } else if (Object.prototype.toString.call(Hand.kind(hand, 2)) === '[object Array]') {
             return this.sideNames[Math.max.apply(Math, Hand.kind(hand, 2))] + 's and ' + this.sideNames[Math.min.apply(Math, Hand.kind(hand, 2))] + 's';
-        } else if (Hand.kind(hand, 2)) {
+        } else if (Hand.kind(hand, 2) !== false) {
             return 'Pair of ' + this.sideNames[Hand.kind(hand, 2)] + 's';
         } else {
             return 'Nothing';
