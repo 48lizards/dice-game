@@ -48,7 +48,7 @@ var Hand = {
         FIVE_OF_A_KIND  : 6
     },
 
-    getHand : function(dieList) {
+    makeHand : function(dieList) {
         var hand = [];
         if (dieList) {
             for (var i = 0; i < 5 && i < dieList.length; i++) {
@@ -67,7 +67,13 @@ var Hand = {
     },
 
     getLowestHand : function() {
-        return this.getHand([Die.sideNames.TEN, Die.sideNames.JACK, Die.sideNames.QUEEN, Die.sideNames.KING, Die.sideNames.ACE]);
+        return this.makeHand([Die.sideNames.TEN, Die.sideNames.JACK, Die.sideNames.QUEEN, Die.sideNames.KING, Die.sideNames.ACE]);
+    },
+
+    getDiceUnderCup : function(hand) {
+        hand.filter(function(die) {
+            return die.isUnderCup;
+        });
     },
 
     getScore : function(hand) {
@@ -91,7 +97,7 @@ var Hand = {
     kind : function(hand, num) {
         var matches = [];
         for (var i = 0; i < Die.getSides().length; i++) {
-            handWithOneSideOnly = hand.filter(function(dieInHand) { return dieInHand.sideFacingUp == Die.getSides()[i] });
+            var handWithOneSideOnly = hand.filter(function(dieInHand) { return dieInHand.sideFacingUp == Die.getSides()[i] });
             if (handWithOneSideOnly.length == num) {
                 matches.push(Die.getSides()[i]);
             }
