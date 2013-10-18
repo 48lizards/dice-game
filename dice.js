@@ -157,3 +157,50 @@ var HandTextView = {
 
 }
 
+
+function GameController() {
+    this.setupGame = function() {
+        var hand = Hand.makeHand();
+        View.createDice(hand)
+    };
+    this.commandHandler = function(command, params) {
+        var val = command.apply(command, params);
+    };
+}
+
+function View() {
+    this.createDice(hand) {
+        for (var dieNum = 0; dieNum < hand.length; dieNum++) {
+            $('#dice-container').append('<div class="die" id="die' + i + '">' + HandTextView.sideNames[hand[i].sideFacingUp]);
+        }
+    }
+}
+
+
+function GameModel(numPlayers) {
+    this.numPlayers = numPlayers;
+    this.currentPlayer = 0;
+    this.previousPlayer = null;
+    this.passDirection = 1;
+    this.fsm = StateMachine.create({
+        initial: 'beginning-of-turn',
+        events: [
+            { name: 'tilt', from: 'beginning-of-turn', to: 'middle-of-turn' },
+            { name: 'lift', from: 'beginning-of-turn', to: 'end-of-round' },
+            { name: 'pass', from: 'middle-of-turn', to: 'beginning-of-turn' }
+        ],
+        callbacks: {
+            ontilt: function(event, from, to) {},
+            onlift: function(event, from, to, hand, passedHand) {
+                var itsThere = hand.getScore() >= passedHand.getScore();
+            },
+            onpass: function(event, from, to) {
+                this.incrementTurn();
+            }
+        }
+    });
+}
+GameModel.prototype.incrementTurn = function() {
+    this.currentPlayer = (currentPlayer + 1 * passDirection) % numPlayers;
+};
+
