@@ -26,3 +26,11 @@ h1 {
     margin-top:20;
     text-align:center;
 }
+
+#cup {
+    background-color:blue;
+    height:120px;
+    width:150px;
+    text-align:center;
+    padding-top:75px;
+}

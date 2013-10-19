@@ -159,9 +159,12 @@ var HandTextView = {
 
 
 function GameController() {
-    this.setupGame = function() {
+    this.setupGame = function(numPlayers) {
+        this.game = new GameModel(numPlayers);
         var hand = Hand.makeHand();
-        View.createDice(hand)
+        this.view = new View();
+        this.view.createDice(hand);
+        this.view.displayHandDescription(hand);
     };
     this.commandHandler = function(command, params) {
         var val = command.apply(command, params);
@@ -169,11 +172,17 @@ function GameController() {
 }
 
 function View() {
-    this.createDice(hand) {
+    this.subscribers = [];
+    this.createDice = function(hand) {
         for (var dieNum = 0; dieNum < hand.length; dieNum++) {
-            $('#dice-container').append('<div class="die" id="die' + i + '">' + HandTextView.sideNames[hand[i].sideFacingUp]);
+            $('#dice-container').append('<div class="die" id="die' + dieNum + '">' + HandTextView.sideNames[hand[dieNum].sideFacingUp]);
         }
-    }
+        $('.die').draggable();
+        $('#cup').draggable();
+    };
+    this.displayHandDescription = function(hand) {
+        $('#handname-display').text(HandTextView.getDescription(hand));
+    };
 }
 
 
@@ -203,4 +212,9 @@ function GameModel(numPlayers) {
 GameModel.prototype.incrementTurn = function() {
     this.currentPlayer = (currentPlayer + 1 * passDirection) % numPlayers;
 };
+GameModel.prototype.reverseDirection = function() {
+    this.passDirection = this.passDirection * -1;
+};
 
+var controller = new GameController();
+controller.setupGame(2);
