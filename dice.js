@@ -158,13 +158,25 @@ var HandTextView = {
 }
 
 
-function GameController() {
-    this.setupGame = function(numPlayers) {
-        this.game = new GameModel(numPlayers);
-        var hand = Hand.makeHand();
-        this.view = new View();
-        this.view.createDice(hand);
-        this.view.displayHandDescription(hand);
+function GameController(numPlayers) {
+    var game = new GameModel(numPlayers),
+        hand = Hand.makeHand(),
+        view = new View();
+    view.createDice(hand);
+    view.displayHandDescription(hand);
+
+    this.rollHandler = function(dieNum) {
+        hand = Hand.reroll(hand, dieNum); // :(
+        updateView();
+    };
+    this.passHandler = function() {
+        hand = Hand.resetRolls(hand);
+    };
+    view.subscribe(this.rollHandler, 'roll');
+    view.subscribe(this.passHandler, 'pass');
+    var updateView = function() {
+        view.updateDice(hand);
+        view.displayHandDescription(hand);
     };
     this.commandHandler = function(command, params) {
         var val = command.apply(command, params);
@@ -172,13 +184,40 @@ function GameController() {
 }
 
 function View() {
-    this.subscribers = [];
+    var subscribers = {
+        any: []
+    };
+    this.subscribe = function(fn, type) {
+        var type = type || 'any';
+        if (typeof subscribers[type] === "undefined") {
+            subscribers[type] = [];
+        }
+        subscribers[type].push(fn);
+    };
+    $('#pass').click(function() {
+        var max = subscribers['pass'].length;
+        for (var i = 0; i < max; i++) {
+            subscribers['pass'][i]();
+        }
+    });
     this.createDice = function(hand) {
         for (var dieNum = 0; dieNum < hand.length; dieNum++) {
             $('#dice-container').append('<div class="die" id="die' + dieNum + '">' + HandTextView.sideNames[hand[dieNum].sideFacingUp]);
         }
+        $('#dice-container').children().click(function() {
+            var max = subscribers['roll'].length;
+            for (var i = 0; i < max; i++) {
+                var dieNum = $(this).index()
+                subscribers['roll'][i].call(this, dieNum);
+            }
+        });
         $('.die').draggable();
         $('#cup').draggable();
+    };
+    this.updateDice = function(hand) {
+        for (var dieNum = 0; dieNum < hand.length; dieNum++) {
+            $('#die' + dieNum).text(HandTextView.sideNames[hand[dieNum].sideFacingUp]);
+        }
     };
     this.displayHandDescription = function(hand) {
         $('#handname-display').text(HandTextView.getDescription(hand));
@@ -216,5 +255,4 @@ GameModel.prototype.reverseDirection = function() {
     this.passDirection = this.passDirection * -1;
 };
 
-var controller = new GameController();
-controller.setupGame(2);
+var controller = new GameController(2);
