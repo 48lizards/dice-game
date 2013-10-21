@@ -162,8 +162,10 @@ function GameController(numPlayers) {
     var game = new GameModel(numPlayers),
         hand = Hand.makeHand(),
         view = new View();
+    game.fsm.tilt();
     view.createDice(hand);
     view.displayHandDescription(hand);
+    view.displayCurrentPlayer(game.currentPlayer);
 
     this.rollHandler = function(dieNum) {
         hand = Hand.reroll(hand, dieNum); // :(
@@ -171,6 +173,9 @@ function GameController(numPlayers) {
     };
     this.passHandler = function() {
         hand = Hand.resetRolls(hand);
+        game.fsm.pass();
+        game.fsm.tilt();
+        view.displayCurrentPlayer(game.currentPlayer);
     };
     view.subscribe(this.rollHandler, 'roll');
     view.subscribe(this.passHandler, 'pass');
@@ -211,8 +216,9 @@ function View() {
                 subscribers['roll'][i].call(this, dieNum);
             }
         });
-        $('.die').draggable();
-        $('#cup').draggable();
+        $('.die').draggable({ revert : function(event){ return !event; }});
+        $('#cup').draggable().droppable();
+        $('#dice-container').droppable();
     };
     this.updateDice = function(hand) {
         for (var dieNum = 0; dieNum < hand.length; dieNum++) {
@@ -222,6 +228,9 @@ function View() {
     this.displayHandDescription = function(hand) {
         $('#handname-display').text(HandTextView.getDescription(hand));
     };
+    this.displayCurrentPlayer = function(currentPlayer) {
+        $('#player-info').text("Player " + currentPlayer + "'s turn");
+    };
 }
 
 
@@ -230,6 +239,7 @@ function GameModel(numPlayers) {
     this.currentPlayer = 0;
     this.previousPlayer = null;
     this.passDirection = 1;
+    var that = this;
     this.fsm = StateMachine.create({
         initial: 'beginning-of-turn',
         events: [
@@ -243,13 +253,13 @@ function GameModel(numPlayers) {
                 var itsThere = hand.getScore() >= passedHand.getScore();
             },
             onpass: function(event, from, to) {
-                this.incrementTurn();
+                that.incrementTurn();
             }
         }
     });
 }
 GameModel.prototype.incrementTurn = function() {
-    this.currentPlayer = (currentPlayer + 1 * passDirection) % numPlayers;
+    this.currentPlayer = (this.currentPlayer + 1 * this.passDirection) % this.numPlayers;
 };
 GameModel.prototype.reverseDirection = function() {
     this.passDirection = this.passDirection * -1;
