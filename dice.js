@@ -124,6 +124,14 @@ var Hand = {
         }
         return hand;
     },
+    putUnderCup : function(hand, dieNum) {
+        hand[dieNum].isUnderCup = true;
+        return hand;
+    },
+    takeOutOfCup : function(hand, dieNum) {
+        hand[dieNum].isUnderCup = false;
+        return hand;
+    }
 }
 
 var HandTextView = {
@@ -177,14 +185,15 @@ function GameController(numPlayers) {
         game.fsm.tilt();
         view.displayCurrentPlayer(game.currentPlayer);
     };
+    this.putInCupHandler = function(dieNum) {
+        hand = Hand.putUnderCup(dieNum);
+    };
     view.subscribe(this.rollHandler, 'roll');
     view.subscribe(this.passHandler, 'pass');
+    view.subscribe(this.putInCupHandler, 'put-in-cup')
     var updateView = function() {
         view.updateDice(hand);
         view.displayHandDescription(hand);
-    };
-    this.commandHandler = function(command, params) {
-        var val = command.apply(command, params);
     };
 }
 
@@ -199,6 +208,7 @@ function View() {
         }
         subscribers[type].push(fn);
     };
+
     $('#pass').click(function() {
         var max = subscribers['pass'].length;
         for (var i = 0; i < max; i++) {
@@ -207,7 +217,11 @@ function View() {
     });
     this.createDice = function(hand) {
         for (var dieNum = 0; dieNum < hand.length; dieNum++) {
-            $('#dice-container').append('<div class="die" id="die' + dieNum + '">' + HandTextView.sideNames[hand[dieNum].sideFacingUp]);
+            if (hand[dieNum].isUnderCup) {
+                $('#cup').append('<div class="die" id="die' + dieNum + '">' + HandTextView.sideNames[hand[dieNum].sideFacingUp]);
+            } else {
+                $('#dice-container').append('<div class="die" id="die' + dieNum + '">' + HandTextView.sideNames[hand[dieNum].sideFacingUp]);
+            }
         }
         $('#dice-container').children().click(function() {
             var max = subscribers['roll'].length;
@@ -217,7 +231,15 @@ function View() {
             }
         });
         $('.die').draggable({ revert : function(event){ return !event; }});
-        $('#cup').draggable().droppable();
+        $('#cup').draggable().droppable({
+            drop: function(event, ui) {
+                var max = subscribers['put-in-cup'].length;
+                for (var i = 0; i < max; i++) {
+                    var dieNum = $(this).index()
+                    subscribers['put-in-cup'][i].call(this, dieNum);
+                }
+            }
+        });
         $('#dice-container').droppable();
     };
     this.updateDice = function(hand) {

@@ -15,7 +15,7 @@ h1 {
     width:50px;
     height:30px;
     margin-right:10px;
-    margin-bottom:20px;
+    margin-bottom:10px;
     float:left;
     text-align:center;
     padding-top:16px;
@@ -29,8 +29,7 @@ h1 {
 
 #cup {
     background-color:blue;
-    height:120px;
-    width:150px;
+    height:225px;
+    width:200px;
     text-align:center;
-    padding-top:75px;
 }
