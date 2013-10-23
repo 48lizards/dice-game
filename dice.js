@@ -139,27 +139,27 @@ var HandTextView = {
 
     getDescription : function(hand) {
         if (Hand.kind(hand, 5) !== false) {
-            return 'Five ' + this.sideNames[Hand.kind(hand, 5)] + 's';
+            return 'five ' + this.sideNames[Hand.kind(hand, 5)] + 's';
         } else if (Hand.kind(hand, 4) !== false) {
             if (Hand.kind(hand, 1) == Die.sideNames.ACE) {
-                return 'Four ' + this.sideNames[Hand.kind(hand, 4)] + 's and an ' + this.sideNames[Hand.kind(hand, 1)];
+                return 'four ' + this.sideNames[Hand.kind(hand, 4)] + 's and an ' + this.sideNames[Hand.kind(hand, 1)];
             } else {
-                return 'Four ' + this.sideNames[Hand.kind(hand, 4)] + 's and a ' + this.sideNames[Hand.kind(hand, 1)];
+                return 'four ' + this.sideNames[Hand.kind(hand, 4)] + 's and a ' + this.sideNames[Hand.kind(hand, 1)];
             }
         } else if (Hand.kind(hand, 3) !== false && Hand.kind(hand, 2) !== false) {
             return this.sideNames[Hand.kind(hand, 3)] + 's full of ' + this.sideNames[Hand.kind(hand, 2)] + 's';
         } else if (Hand.kind(hand, 3) !== false) {
             if (Math.max.apply(Math, Hand.kind(hand, 1)) == Die.sideNames.ACE) {
-                return 'Three ' + this.sideNames[Hand.kind(hand, 3)] + 's and an ' + this.sideNames[Math.max.apply(Math, Hand.kind(hand, 1))];
+                return 'three ' + this.sideNames[Hand.kind(hand, 3)] + 's and an ' + this.sideNames[Math.max.apply(Math, Hand.kind(hand, 1))];
             } else {
-                return 'Three ' + this.sideNames[Hand.kind(hand, 3)] + 's and a ' + this.sideNames[Math.max.apply(Math, Hand.kind(hand, 1))];
+                return 'three ' + this.sideNames[Hand.kind(hand, 3)] + 's and a ' + this.sideNames[Math.max.apply(Math, Hand.kind(hand, 1))];
             }
         } else if (Object.prototype.toString.call(Hand.kind(hand, 2)) === '[object Array]') {
             return this.sideNames[Math.max.apply(Math, Hand.kind(hand, 2))] + 's and ' + this.sideNames[Math.min.apply(Math, Hand.kind(hand, 2))] + 's';
         } else if (Hand.kind(hand, 2) !== false) {
-            return 'Pair of ' + this.sideNames[Hand.kind(hand, 2)] + 's';
+            return 'a pair of ' + this.sideNames[Hand.kind(hand, 2)] + 's';
         } else {
-            return 'Nothing';
+            return 'nothing';
         }
     }
 
@@ -169,7 +169,9 @@ var HandTextView = {
 function GameController(numPlayers) {
     var game = new GameModel(numPlayers),
         hand = Hand.makeHand(),
-        view = new View();
+        view = new View(),
+        handToPass = hand,
+        previousPass = Hand.getLowestHand();
     game.fsm.tilt();
     view.createDice(hand);
     view.displayHandDescription(hand);
@@ -179,11 +181,18 @@ function GameController(numPlayers) {
         hand = Hand.reroll(hand, dieNum); // :(
         updateView();
     };
-    this.passHandler = function() {
-        hand = Hand.resetRolls(hand);
-        game.fsm.pass();
+    this.passHandler = function(isBluff) {
+        if (isBluff) {
+            handToPass = game.bluffHand;
+        } else {
+            handToPass = hand;
+        }
+        var result = game.fsm.pass(handToPass, previousPass);
+        previousPass = handToPass.slice(0);
         game.fsm.tilt();
+        hand = Hand.resetRolls(hand);
         view.displayCurrentPlayer(game.currentPlayer);
+        view.displayPassedHand(game.previousPlayer, previousPass);
     };
     this.putInCupHandler = function(dieNum) {
         hand = Hand.putUnderCup(dieNum);
@@ -217,11 +226,11 @@ function View() {
     });
     this.createDice = function(hand) {
         for (var dieNum = 0; dieNum < hand.length; dieNum++) {
-            if (hand[dieNum].isUnderCup) {
-                $('#cup').append('<div class="die" id="die' + dieNum + '">' + HandTextView.sideNames[hand[dieNum].sideFacingUp]);
-            } else {
+//            if (hand[dieNum].isUnderCup) {
+//                $('#cup').append('<div class="die" id="die' + dieNum + '">' + HandTextView.sideNames[hand[dieNum].sideFacingUp]);
+//            } else {
                 $('#dice-container').append('<div class="die" id="die' + dieNum + '">' + HandTextView.sideNames[hand[dieNum].sideFacingUp]);
-            }
+//            }
         }
         $('#dice-container').children().click(function() {
             var max = subscribers['roll'].length;
@@ -248,11 +257,23 @@ function View() {
         }
     };
     this.displayHandDescription = function(hand) {
-        $('#handname-display').text(HandTextView.getDescription(hand));
+        $('#handname-display').text('You have ' + HandTextView.getDescription(hand));
     };
     this.displayCurrentPlayer = function(currentPlayer) {
         $('#player-info').text("Player " + currentPlayer + "'s turn");
     };
+    this.displayPassedHand = function(previousPlayer, passedHand) {
+        $('#pass-info').text('Player ' + previousPlayer + ' passed you ' + HandTextView.getDescription(passedHand) + '.');
+    };
+    $('#pass-bluff').click(function() {
+        $('#pass-creator').toggle();
+    });
+    $('#submit-pass').click(function() {
+        var max = subscribers['pass'].length;
+        for (var i = 0; i < max; i++) {
+            subscribers['pass'][i](true);
+        }
+    });
 }
 
 
@@ -261,6 +282,7 @@ function GameModel(numPlayers) {
     this.currentPlayer = 0;
     this.previousPlayer = null;
     this.passDirection = 1;
+    this.bluffHand = []
     var that = this;
     this.fsm = StateMachine.create({
         initial: 'beginning-of-turn',
@@ -272,15 +294,27 @@ function GameModel(numPlayers) {
         callbacks: {
             ontilt: function(event, from, to) {},
             onlift: function(event, from, to, hand, passedHand) {
-                var itsThere = hand.getScore() >= passedHand.getScore();
+                var itsThere = Hand.getScore(hand) >= Hand.getScore(passedHand);
             },
-            onpass: function(event, from, to) {
-                that.incrementTurn();
+            onpass: function(event, from, to, currentPass, previousPass) {
+                var passIsValid = Hand.getScore(currentPass) > Hand.getScore(previousPass);
+                if (passIsValid) {
+                    that.incrementTurn();
+                    that.bluffHand = []
+                    return true;
+                } else {
+                    alert('You must pass a hand better than ' + HandTextView.getDescription(previousPass) + '.');
+                    return false;
+                }
             }
         }
     });
+    this.addDieToBluffHand = function(die) {
+        that.bluffHand.push(die);
+    };
 }
 GameModel.prototype.incrementTurn = function() {
+    this.previousPlayer = this.currentPlayer;
     this.currentPlayer = (this.currentPlayer + 1 * this.passDirection) % this.numPlayers;
 };
 GameModel.prototype.reverseDirection = function() {
