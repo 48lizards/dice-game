@@ -54,7 +54,7 @@ var Hand = {
             for (var i = 0; i < 5 && i < dieList.length; i++) {
                 hand.push(Die.getDie(dieList[i]));
             }
-            var diceToAdd = Die.getSides().sort().reverse().filter(function(side) { return hand.indexOf(side) == -1; });
+            var diceToAdd = Die.getSides().sort().reverse().filter(function(side) { return dieList.indexOf(side) == -1; });
             while (hand.length < 5) {
                 hand.push(Die.getDie(diceToAdd.pop()));
             }
@@ -183,7 +183,7 @@ function GameController(numPlayers) {
     };
     this.passHandler = function(isBluff) {
         if (isBluff) {
-            handToPass = game.bluffHand;
+            handToPass = Hand.makeHand(game.bluffHand);
         } else {
             handToPass = hand;
         }
@@ -200,10 +200,21 @@ function GameController(numPlayers) {
     this.takeOutOfCupHandler = function(dieNum) {
         hand = Hand.takeOutOfCup(hand, dieNum);
     };
+    this.addDieToBluffHandler = function(die) {
+        game.addDieToBluffHand(die);
+        var bluffHand = Hand.makeHand(game.bluffHand);
+        view.displayBluff(bluffHand);
+    };
+    this.clearHandler = function() {
+        game.clearBluffHand();
+        view.displayBluff();
+    };
     view.subscribe(this.rollHandler, 'roll');
     view.subscribe(this.passHandler, 'pass');
-    view.subscribe(this.putInCupHandler, 'put-in-cup')
-    view.subscribe(this.takeOutOfCupHandler, 'take-out-of-cup')
+    view.subscribe(this.putInCupHandler, 'put-in-cup');
+    view.subscribe(this.takeOutOfCupHandler, 'take-out-of-cup');
+    view.subscribe(this.addDieToBluffHandler, 'add-die-to-bluff');
+    view.subscribe(this.clearHandler, 'clear');
     var updateView = function() {
         view.updateDice(hand);
         view.displayHandDescription(hand);
@@ -224,16 +235,14 @@ function View() {
     var publish = function(type, arg) {
         var max = subscribers[type].length;
         for (var i = 0; i < max; i++) {
-        if (arg !== undefined) {
-            subscribers[type][i].call(this, arg);
-        }
-            subscribers[type][i]();
+            if (arg !== undefined) {
+                subscribers[type][i].call(this, arg);
+            } else {
+                subscribers[type][i]();
+            }
         }
     };
 
-    $('#pass').click(function() {
-        publish('pass');
-    });
     this.createDice = function(hand) {
         for (var dieNum = 0; dieNum < hand.length; dieNum++) {
 //            if (hand[dieNum].isUnderCup) {
@@ -243,6 +252,7 @@ function View() {
 //            }
         }
         $('#dice-container').children().click(function() {
+            var dieNum = $(this).index();
             publish('roll', dieNum);
         });
         $('.die').draggable({ revert : function(event){ return !event; }});
@@ -254,11 +264,14 @@ function View() {
         });
         $('#dice-container').droppable({
             drop: function(event, ui) {
-                var dieNum = $(this).index()
+                var dieNum = $(this).index();
                 publish('take-out-of-cup', dieNum);
             }
         });
     };
+    $('#pass').click(function() {
+        publish('pass');
+    });
     this.updateDice = function(hand) {
         for (var dieNum = 0; dieNum < hand.length; dieNum++) {
             $('#die' + dieNum).text(HandTextView.sideNames[hand[dieNum].sideFacingUp]);
@@ -273,11 +286,24 @@ function View() {
     this.displayPassedHand = function(previousPlayer, passedHand) {
         $('#pass-info').text('Player ' + previousPlayer + ' passed you ' + HandTextView.getDescription(passedHand) + '.');
     };
+    this.displayBluff = function(hand) {
+        if (hand !== undefined && hand.length >= 2 && HandTextView.getDescription(hand) != 'nothing') {
+            $('#pass-display').text('Passing ' + HandTextView.getDescription(hand));
+        } else {
+            $('#pass-display').text('');
+        }
+    };
     $('#pass-bluff').click(function() {
         $('#pass-creator').toggle();
     });
     $('#submit-pass').click(function() {
         publish('pass', true);
+    });
+    $('#bluff-dice').children().click(function() {
+        publish('add-die-to-bluff', $(this).index());
+    });
+    $('#clear').click(function() {
+        publish('clear');
     });
 }
 
@@ -315,7 +341,9 @@ function GameModel(numPlayers) {
         }
     });
     this.addDieToBluffHand = function(die) {
-        that.bluffHand.push(die);
+        if (that.bluffHand.length < 5) {
+            that.bluffHand.push(die);
+        }
     };
     this.clearBluffHand = function() {
         that.bluffHand = [];
