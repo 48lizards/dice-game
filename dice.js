@@ -187,7 +187,7 @@ function GameController(numPlayers) {
         } else {
             handToPass = hand;
         }
-        var result = game.fsm.pass(handToPass, previousPass);
+        game.fsm.pass(handToPass, previousPass);
         previousPass = handToPass.slice(0);
         game.fsm.tilt();
         hand = Hand.resetRolls(hand);
@@ -195,11 +195,15 @@ function GameController(numPlayers) {
         view.displayPassedHand(game.previousPlayer, previousPass);
     };
     this.putInCupHandler = function(dieNum) {
-        hand = Hand.putUnderCup(dieNum);
+        hand = Hand.putUnderCup(hand, dieNum);
+    };
+    this.takeOutOfCupHandler = function(dieNum) {
+        hand = Hand.takeOutOfCup(hand, dieNum);
     };
     view.subscribe(this.rollHandler, 'roll');
     view.subscribe(this.passHandler, 'pass');
     view.subscribe(this.putInCupHandler, 'put-in-cup')
+    view.subscribe(this.takeOutOfCupHandler, 'take-out-of-cup')
     var updateView = function() {
         view.updateDice(hand);
         view.displayHandDescription(hand);
@@ -217,12 +221,18 @@ function View() {
         }
         subscribers[type].push(fn);
     };
+    var publish = function(type, arg) {
+        var max = subscribers[type].length;
+        for (var i = 0; i < max; i++) {
+        if (arg !== undefined) {
+            subscribers[type][i].call(this, arg);
+        }
+            subscribers[type][i]();
+        }
+    };
 
     $('#pass').click(function() {
-        var max = subscribers['pass'].length;
-        for (var i = 0; i < max; i++) {
-            subscribers['pass'][i]();
-        }
+        publish('pass');
     });
     this.createDice = function(hand) {
         for (var dieNum = 0; dieNum < hand.length; dieNum++) {
@@ -233,23 +243,21 @@ function View() {
 //            }
         }
         $('#dice-container').children().click(function() {
-            var max = subscribers['roll'].length;
-            for (var i = 0; i < max; i++) {
-                var dieNum = $(this).index()
-                subscribers['roll'][i].call(this, dieNum);
-            }
+            publish('roll', dieNum);
         });
         $('.die').draggable({ revert : function(event){ return !event; }});
         $('#cup').draggable().droppable({
             drop: function(event, ui) {
-                var max = subscribers['put-in-cup'].length;
-                for (var i = 0; i < max; i++) {
-                    var dieNum = $(this).index()
-                    subscribers['put-in-cup'][i].call(this, dieNum);
-                }
+                var dieNum = $(this).index();
+                publish('put-in-cup', dieNum);
             }
         });
-        $('#dice-container').droppable();
+        $('#dice-container').droppable({
+            drop: function(event, ui) {
+                var dieNum = $(this).index()
+                publish('take-out-of-cup', dieNum);
+            }
+        });
     };
     this.updateDice = function(hand) {
         for (var dieNum = 0; dieNum < hand.length; dieNum++) {
@@ -269,10 +277,7 @@ function View() {
         $('#pass-creator').toggle();
     });
     $('#submit-pass').click(function() {
-        var max = subscribers['pass'].length;
-        for (var i = 0; i < max; i++) {
-            subscribers['pass'][i](true);
-        }
+        publish('pass', true);
     });
 }
 
@@ -311,6 +316,9 @@ function GameModel(numPlayers) {
     });
     this.addDieToBluffHand = function(die) {
         that.bluffHand.push(die);
+    };
+    this.clearBluffHand = function() {
+        that.bluffHand = [];
     };
 }
 GameModel.prototype.incrementTurn = function() {

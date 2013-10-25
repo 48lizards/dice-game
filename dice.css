@@ -6,7 +6,10 @@ h1 {
     margin-left:auto;
     margin-right:auto;
 }
-
+#dice-container {
+    width:320px;
+    height:80px;
+}
 .die {
     background-color:red;
     border-style:solid;
