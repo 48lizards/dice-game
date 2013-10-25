@@ -172,7 +172,7 @@ function GameController(numPlayers) {
         view = new View(),
         handToPass = hand,
         previousPass = Hand.getLowestHand();
-    //game.fsm.tilt();
+    game.fsm.start();
     view.createDice(hand);
     view.displayHandDescription(hand);
     view.displayCurrentPlayer(game.currentPlayer);
@@ -216,6 +216,9 @@ function GameController(numPlayers) {
     this.tiltHandler = function() {
         game.fsm.tilt();
         view.show('middle');
+    };
+    this.liftHandler = function() {
+        game.fsm.lift(hand, previousPass);
     };
     view.subscribe(this.rollHandler, 'roll');
     view.subscribe(this.passHandler, 'pass');
@@ -337,10 +340,14 @@ function GameModel(numPlayers) {
     this.previousPlayer = null;
     this.passDirection = 1;
     this.bluffHand = []
+    var reportWinner = function(player) {
+        alert('Player ' + player + ' wins!');
+    };
     var that = this;
     this.fsm = StateMachine.create({
-        initial: 'beginningofturn',
+        initial: 'endofround',
         events: [
+            { name: 'start', from: 'endofround', to: 'beginningofturn' },
             { name: 'tilt', from: 'beginningofturn', to: 'middleofturn' },
             { name: 'lift', from: 'beginningofturn', to: 'endofround' },
             { name: 'pass', from: 'middleofturn', to: 'beginningofturn' }
@@ -349,6 +356,12 @@ function GameModel(numPlayers) {
             ontilt: function(event, from, to) {},
             onlift: function(event, from, to, hand, passedHand) {
                 var itsThere = Hand.getScore(hand) >= Hand.getScore(passedHand);
+                if (itsThere) {
+                    reportWinner(that.previousPlayer);
+                } else {
+                    reportWinner(that.currentPlayer);
+                }
+                that.fsm.start();
             },
             onbeforepass: function(event, from, to, currentPass, previousPass) {
                 var passIsValid = Hand.getScore(currentPass) > Hand.getScore(previousPass);
