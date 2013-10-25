@@ -172,10 +172,11 @@ function GameController(numPlayers) {
         view = new View(),
         handToPass = hand,
         previousPass = Hand.getLowestHand();
-    game.fsm.tilt();
+    //game.fsm.tilt();
     view.createDice(hand);
     view.displayHandDescription(hand);
     view.displayCurrentPlayer(game.currentPlayer);
+    view.show('beginning');
 
     this.rollHandler = function(dieNum) {
         hand = Hand.reroll(hand, dieNum); // :(
@@ -188,11 +189,14 @@ function GameController(numPlayers) {
             handToPass = hand;
         }
         game.fsm.pass(handToPass, previousPass);
-        previousPass = handToPass.slice(0);
-        game.fsm.tilt();
-        hand = Hand.resetRolls(hand);
-        view.displayCurrentPlayer(game.currentPlayer);
-        view.displayPassedHand(game.previousPlayer, previousPass);
+        if (game.fsm.is('beginningofturn')) {
+            previousPass = handToPass.slice(0);
+            //game.fsm.tilt();
+            view.show('beginning');
+            hand = Hand.resetRolls(hand);
+            view.displayCurrentPlayer(game.currentPlayer);
+            view.displayPassedHand(game.previousPlayer, previousPass);
+        }
     };
     this.putInCupHandler = function(dieNum) {
         hand = Hand.putUnderCup(hand, dieNum);
@@ -209,12 +213,18 @@ function GameController(numPlayers) {
         game.clearBluffHand();
         view.displayBluff();
     };
+    this.tiltHandler = function() {
+        game.fsm.tilt();
+        view.show('middle');
+    };
     view.subscribe(this.rollHandler, 'roll');
     view.subscribe(this.passHandler, 'pass');
     view.subscribe(this.putInCupHandler, 'put-in-cup');
     view.subscribe(this.takeOutOfCupHandler, 'take-out-of-cup');
     view.subscribe(this.addDieToBluffHandler, 'add-die-to-bluff');
     view.subscribe(this.clearHandler, 'clear');
+    view.subscribe(this.tiltHandler, 'tilt');
+    view.subscribe(this.liftHandler, 'lift');
     var updateView = function() {
         view.updateDice(hand);
         view.displayHandDescription(hand);
@@ -242,7 +252,12 @@ function View() {
             }
         }
     };
-
+    this.show = function(state) {
+        var states = ['beginning', 'middle'];
+        var statesToHide = states.filter(function(s) { return s !== state });
+        $('.' + state).show();
+        statesToHide.map(function(s) { $('.' + s).hide() });
+    };
     this.createDice = function(hand) {
         for (var dieNum = 0; dieNum < hand.length; dieNum++) {
 //            if (hand[dieNum].isUnderCup) {
@@ -260,12 +275,14 @@ function View() {
             drop: function(event, ui) {
                 var dieNum = $(this).index();
                 publish('put-in-cup', dieNum);
+                 $('#dice-container:nth-child(' + dieNum + ')').addClass('middle');
             }
         });
         $('#dice-container').droppable({
             drop: function(event, ui) {
                 var dieNum = $(this).index();
                 publish('take-out-of-cup', dieNum);
+                $('#dice-container:nth-child(' + dieNum + ')').removeClass('middle');
             }
         });
     };
@@ -305,6 +322,12 @@ function View() {
     $('#clear').click(function() {
         publish('clear');
     });
+    $('#tilt').click(function() {
+        publish('tilt');
+    });
+    $('#lift').click(function() {
+        publish('lift');
+    });
 }
 
 
@@ -316,18 +339,18 @@ function GameModel(numPlayers) {
     this.bluffHand = []
     var that = this;
     this.fsm = StateMachine.create({
-        initial: 'beginning-of-turn',
+        initial: 'beginningofturn',
         events: [
-            { name: 'tilt', from: 'beginning-of-turn', to: 'middle-of-turn' },
-            { name: 'lift', from: 'beginning-of-turn', to: 'end-of-round' },
-            { name: 'pass', from: 'middle-of-turn', to: 'beginning-of-turn' }
+            { name: 'tilt', from: 'beginningofturn', to: 'middleofturn' },
+            { name: 'lift', from: 'beginningofturn', to: 'endofround' },
+            { name: 'pass', from: 'middleofturn', to: 'beginningofturn' }
         ],
         callbacks: {
             ontilt: function(event, from, to) {},
             onlift: function(event, from, to, hand, passedHand) {
                 var itsThere = Hand.getScore(hand) >= Hand.getScore(passedHand);
             },
-            onpass: function(event, from, to, currentPass, previousPass) {
+            onbeforepass: function(event, from, to, currentPass, previousPass) {
                 var passIsValid = Hand.getScore(currentPass) > Hand.getScore(previousPass);
                 if (passIsValid) {
                     that.incrementTurn();
@@ -337,6 +360,8 @@ function GameModel(numPlayers) {
                     alert('You must pass a hand better than ' + HandTextView.getDescription(previousPass) + '.');
                     return false;
                 }
+            },
+            onbeginningofturn: function(event, from, to) {
             }
         }
     });

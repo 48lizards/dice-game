@@ -8,7 +8,20 @@ h1 {
 }
 #dice-container {
     width:320px;
-    height:80px;
+    height:120px;
+    position:relative;
+}
+#book {
+    width:250px;
+    height:300px;
+    -webkit-transform:rotate3d(1.75,-0.75,1.5,90deg);
+    position:relative;
+    top:-150px;
+    z-index:-1;
+}
+#dice-and-book {
+    width:320px;
+    height:200px;
 }
 .die {
     background-color:red;
@@ -22,6 +35,8 @@ h1 {
     float:left;
     text-align:center;
     padding-top:16px;
+    position:relative;
+    bottom:-75%;
 }
 
 #handname-display {

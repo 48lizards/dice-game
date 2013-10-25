@@ -10,20 +10,33 @@
         <div id="player-info"></div>
         <div id="container">
             <div id="cup"></div>
-            <div id="dice-container"></div>
-            <div id="handname-display"></div>
-            <div id="pass-info"></div>
-            <button id="pass" type="button">Pass as is</button>
-            <button id="pass-bluff" type="button">Create pass</button>
-            <div id="pass-creator">
-                <span class="side-selector" id="select-9">9</span>
-                <span class="side-selector" id="select-10">10</span>
-                <span class="side-selector" id="select-J">J</span>
-                <span class="side-selector" id="select-Q">Q</span>
-                <span class="side-selector" id="select-K">K</span>
-                <span class="side-selector" id="select-A">A</span>
-                <div id="pass-display"></div>
-                <button id="submit-pass">Submit</button>
+            <div id="dice-and-book">
+                <div id="dice-container"></div>
+                <img id="book" src="http://www.rainbowresource.com/products/010553.jpg">
+            </div>
+            <div id="for-passing" class="middle">
+                <div id="handname-display"></div>
+                <div id="pass-info"></div>
+                <button id="pass" type="button">Pass as is</button>
+                <button id="pass-bluff" type="button">Create pass</button>
+                <div id="pass-creator">
+                    <div id="bluff-dice">
+                        <button class="side-selector" id="select-9">9</button>
+                        <button class="side-selector" id="select-10">10</button>
+                        <button class="side-selector" id="select-J">J</button>
+                        <button class="side-selector" id="select-Q">Q</button>
+                        <button class="side-selector" id="select-K">K</button>
+                        <button class="side-selector" id="select-A">A</button>
+                    </div>
+                    <div id="pass-display"></div>
+                    <button id="undo">Undo</button>
+                    <button id="clear">Clear</button>
+                    <button id="submit-pass">Submit</button>
+                </div>
+            </div>
+            <div id="believe-it-or-not" class="beginning">
+                <button id="tilt">Tilt Cup</button>
+                <button id="lift">Lift Cup</button>
             </div>
         </div>
     <script src="lib/jquery-1.10.2.js"></script>
