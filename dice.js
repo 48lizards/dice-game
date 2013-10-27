@@ -25,9 +25,11 @@ var Die = {
     getDie : function(sideFacingUp, hasBeenRolledThisTurn, isUnderCup) {
         hasBeenRolledThisTurn = typeof hasBeenRolledThisTurn !== 'undefined' ? hasBeenRolledThisTurn : true;
         isUnderCup = typeof isUnderCup !== 'undefined' ? isUnderCup : true;
-        return {sideFacingUp : sideFacingUp,
-                hasBeenRolledThisTurn : hasBeenRolledThisTurn,
-                isUnderCup : isUnderCup};
+        return {
+            sideFacingUp : sideFacingUp,
+            hasBeenRolledThisTurn : hasBeenRolledThisTurn,
+            isUnderCup : isUnderCup
+        };
     },
 
     getRolledDie : function(hasBeenRolledThisTurn, isUnderCup) {
@@ -35,7 +37,7 @@ var Die = {
         isUnderCup = typeof isUnderCup !== 'undefined' ? isUnderCup : true;
         return this.getDie(this.getRandomSide(), hasBeenRolledThisTurn, isUnderCup);
     }
-}
+};
 
 var Hand = {
     handTypes : {
@@ -47,7 +49,6 @@ var Hand = {
         FOUR_OF_A_KIND  : 5,
         FIVE_OF_A_KIND  : 6
     },
-
     makeHand : function(dieList) {
         var hand = [];
         if (dieList) {
@@ -65,17 +66,14 @@ var Hand = {
         }
         return hand;
     },
-
     getLowestHand : function() {
         return this.makeHand([Die.sideNames.TEN, Die.sideNames.JACK, Die.sideNames.QUEEN, Die.sideNames.KING, Die.sideNames.ACE]);
     },
-
     getDiceUnderCup : function(hand) {
         hand.filter(function(die) {
             return die.isUnderCup;
         });
     },
-
     getScore : function(hand) {
         if (this.kind(hand, 5) !== false) {
             return [this.handTypes.FIVE_OF_A_KIND, this.kind(hand, 5)]; 
@@ -93,7 +91,6 @@ var Hand = {
             return [this.handTypes.NOTHING];
         }
     },
-
     kind : function(hand, num) {
         var matches = [];
         for (var i = 0; i < Die.getSides().length; i++) {
@@ -110,14 +107,12 @@ var Hand = {
             return matches;
         }
     },
-
     reroll : function(hand, dieNum) {
         if (!hand[dieNum].hasBeenRolledThisTurn) {
             hand[dieNum] = Die.getRolledDie(true, hand[dieNum].isUnderCup);
         }
         return hand;
     },
-
     resetRolls : function(hand) {
         for (var i = 0; i < hand.length; i++) {
             hand[i].hasBeenRolledThisTurn = false;
@@ -162,7 +157,6 @@ var HandTextView = {
             return 'nothing';
         }
     }
-
 }
 
 
@@ -179,8 +173,10 @@ function GameController(numPlayers) {
     view.show('beginning');
 
     this.rollHandler = function(dieNum) {
-        hand = Hand.reroll(hand, dieNum); // :(
-        updateView();
+        if (game.fsm.is('middleofturn')) {
+            hand = Hand.reroll(hand, dieNum);
+            updateView();
+        }
     };
     this.passHandler = function(isBluff) {
         if (isBluff) {
@@ -219,6 +215,7 @@ function GameController(numPlayers) {
     };
     this.liftHandler = function() {
         game.fsm.lift(hand, previousPass);
+        view.show('middle');
     };
     view.subscribe(this.rollHandler, 'roll');
     view.subscribe(this.passHandler, 'pass');
@@ -266,14 +263,23 @@ function View() {
 //            if (hand[dieNum].isUnderCup) {
 //                $('#cup').append('<div class="die" id="die' + dieNum + '">' + HandTextView.sideNames[hand[dieNum].sideFacingUp]);
 //            } else {
-                $('#dice-container').append('<div class="die" id="die' + dieNum + '">' + HandTextView.sideNames[hand[dieNum].sideFacingUp]);
+                $('#dice-container').append('<div class="die middle" id="die' + dieNum + '">' + HandTextView.sideNames[hand[dieNum].sideFacingUp]);
 //            }
         }
         $('#dice-container').children().click(function() {
-            var dieNum = $(this).index();
-            publish('roll', dieNum);
+            if ($(this).hasClass('noclick')) { // prevent roll if die has been dragged
+                $(this).removeClass('noclick');
+            } else {
+                var dieNum = $(this).index();
+                publish('roll', dieNum);
+            }
         });
-        $('.die').draggable({ revert : function(event){ return !event; }});
+        $('.die').draggable({
+            start: function(event, ui) {
+                $(this).addClass('noclick');
+            },
+            revert : function(event) { return !event; }
+        });
         $('#cup').draggable().droppable({
             drop: function(event, ui) {
                 var dieNum = $(this).index();
@@ -289,9 +295,6 @@ function View() {
             }
         });
     };
-    $('#pass').click(function() {
-        publish('pass');
-    });
     this.updateDice = function(hand) {
         for (var dieNum = 0; dieNum < hand.length; dieNum++) {
             $('#die' + dieNum).text(HandTextView.sideNames[hand[dieNum].sideFacingUp]);
@@ -313,6 +316,9 @@ function View() {
             $('#pass-display').text('');
         }
     };
+    $('#pass').click(function() {
+        publish('pass');
+    });
     $('#pass-bluff').click(function() {
         $('#pass-creator').toggle();
     });
