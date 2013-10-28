@@ -214,8 +214,8 @@ function GameController(numPlayers) {
         view.show('middle');
     };
     this.liftHandler = function() {
-        game.fsm.lift(hand, previousPass);
         view.show('middle');
+        game.fsm.lift(hand, previousPass);
     };
     view.subscribe(this.rollHandler, 'roll');
     view.subscribe(this.passHandler, 'pass');
