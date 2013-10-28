@@ -159,6 +159,39 @@ var HandTextView = {
     }
 }
 
+var publisher = {
+    subscribers : {
+        any: []
+    },
+    subscribe : function(fn, type) {
+        var type = type || 'any';
+        if (typeof subscribers[type] === "undefined") {
+            subscribers[type] = [];
+        }
+        subscribers[type].push(fn);
+    },
+    publish : function(type, arg) {
+        var max = subscribers[type].length;
+        for (var i = 0; i < max; i++) {
+            if (arg !== undefined) {
+                subscribers[type][i].call(this, arg);
+            } else {
+                subscribers[type][i]();
+            }
+        }
+    }
+};
+
+function makePublisher(o) {
+    var i;
+    for (i in publisher) {
+        if (publisher.hasOwnProperty(i) && typeof publisher[i] === "function") {
+            o[i] = publisher[i];
+        }
+    }
+    o.subscribers = {any: []};
+}
+
 
 function GameController(numPlayers) {
     var game = new GameModel(numPlayers),
@@ -166,6 +199,7 @@ function GameController(numPlayers) {
         view = new View(),
         handToPass = hand,
         previousPass = Hand.getLowestHand();
+    makePublisher(view);
     game.fsm.start();
     view.createDice(hand);
     view.displayHandDescription(hand);
@@ -232,40 +266,42 @@ function GameController(numPlayers) {
 }
 
 function View() {
-    var subscribers = {
-        any: []
-    };
-    this.subscribe = function(fn, type) {
-        var type = type || 'any';
-        if (typeof subscribers[type] === "undefined") {
-            subscribers[type] = [];
-        }
-        subscribers[type].push(fn);
-    };
-    var publish = function(type, arg) {
-        var max = subscribers[type].length;
-        for (var i = 0; i < max; i++) {
-            if (arg !== undefined) {
-                subscribers[type][i].call(this, arg);
-            } else {
-                subscribers[type][i]();
-            }
-        }
-    };
-    this.show = function(state) {
-        var states = ['beginning', 'middle'];
-        var statesToHide = states.filter(function(s) { return s !== state });
-        $('.' + state).show();
-        statesToHide.map(function(s) { $('.' + s).hide() });
+    var self = this;
+    var stage = new Kinetic.Stage({
+        container: 'container',
+        width: 600,
+        height: 600
+    });
+
+    var layer = new Kinetic.Layer();
+
+    this.createDie = function(sideFacingUp) {
+        var die= new Kinetic.Group();
+        var dieShape = new Kinetic.Rect({
+            width: 50,
+            height: 50,
+            fill: '#ffefdb',
+            cornerRadius: 5
+        });
+        var dieText = new Kinetic.Text({
+            x: 50,
+            y: 50,
+            text: HandTextView.sideNames[sideFacingUp],
+            textFill: 'black'
+        });
+        die.add(dieShape);
+        die.add(dieText);
+        return die;
     };
     this.createDice = function(hand) {
         for (var dieNum = 0; dieNum < hand.length; dieNum++) {
-//            if (hand[dieNum].isUnderCup) {
-//                $('#cup').append('<div class="die" id="die' + dieNum + '">' + HandTextView.sideNames[hand[dieNum].sideFacingUp]);
-//            } else {
-                $('#dice-container').append('<div class="die middle" id="die' + dieNum + '">' + HandTextView.sideNames[hand[dieNum].sideFacingUp]);
-//            }
+            var die = self.createDie(hand[dieNum].sideFacingUp);
+            die.setX(dieNum * 60);
+            die.setY(50);
+            die.id = dieNum;
+            layer.add(die);
         }
+        stage.add(layer);
         $('#dice-container').children().click(function() {
             if ($(this).hasClass('noclick')) { // prevent roll if die has been dragged
                 $(this).removeClass('noclick');
@@ -295,6 +331,12 @@ function View() {
             }
         });
     };
+    this.show = function(state) {
+        var states = ['beginning', 'middle'];
+        var statesToHide = states.filter(function(s) { return s !== state });
+        $('.' + state).show();
+        statesToHide.map(function(s) { $('.' + s).hide() });
+    };
     this.updateDice = function(hand) {
         for (var dieNum = 0; dieNum < hand.length; dieNum++) {
             $('#die' + dieNum).text(HandTextView.sideNames[hand[dieNum].sideFacingUp]);
@@ -317,25 +359,25 @@ function View() {
         }
     };
     $('#pass').click(function() {
-        publish('pass');
+        self.publish('pass');
     });
     $('#pass-bluff').click(function() {
         $('#pass-creator').toggle();
     });
     $('#submit-pass').click(function() {
-        publish('pass', true);
+        self.publish('pass', true);
     });
     $('#bluff-dice').children().click(function() {
-        publish('add-die-to-bluff', $(this).index());
+        self.publish('add-die-to-bluff', $(this).index());
     });
     $('#clear').click(function() {
-        publish('clear');
+        self.publish('clear');
     });
     $('#tilt').click(function() {
-        publish('tilt');
+        self.publish('tilt');
     });
     $('#lift').click(function() {
-        publish('lift');
+        self.publish('lift');
     });
 }
 
