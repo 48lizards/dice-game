@@ -33,7 +33,7 @@ var Die = {
     },
 
     getRolledDie : function(hasBeenRolledThisTurn, isUnderCup) {
-        hasBeenRolledThisTurn = typeof hasBeenRolledThisTurn !== 'undefined' ? hasBeenRolledThisTurn : true;
+        hasBeenRolledThisTurn = typeof hasBeenRolledThisTurn !== 'undefined' ? hasBeenRolledThisTurn : false;
         isUnderCup = typeof isUnderCup !== 'undefined' ? isUnderCup : true;
         return this.getDie(this.getRandomSide(), hasBeenRolledThisTurn, isUnderCup);
     }
@@ -165,18 +165,18 @@ var publisher = {
     },
     subscribe : function(fn, type) {
         var type = type || 'any';
-        if (typeof subscribers[type] === "undefined") {
-            subscribers[type] = [];
+        if (typeof this.subscribers[type] === "undefined") {
+            this.subscribers[type] = [];
         }
-        subscribers[type].push(fn);
+        this.subscribers[type].push(fn);
     },
     publish : function(type, arg) {
-        var max = subscribers[type].length;
+        var max = this.subscribers[type].length;
         for (var i = 0; i < max; i++) {
             if (arg !== undefined) {
-                subscribers[type][i].call(this, arg);
+                this.subscribers[type][i].call(this, arg);
             } else {
-                subscribers[type][i]();
+                this.subscribers[type][i]();
             }
         }
     }
@@ -201,7 +201,7 @@ function GameController(numPlayers) {
         previousPass = Hand.getLowestHand();
     makePublisher(view);
     game.fsm.start();
-    view.createDice(hand);
+    view.setUpElements(hand);
     view.displayHandDescription(hand);
     view.displayCurrentPlayer(game.currentPlayer);
     view.show('beginning');
@@ -266,28 +266,187 @@ function GameController(numPlayers) {
 }
 
 function View() {
-    var self = this;
-    var stage = new Kinetic.Stage({
-        container: 'container',
-        width: 600,
-        height: 600
-    });
+    var self = this,
+        stage = new Kinetic.Stage({
+            container: 'container',
+            width: 600,
+            height: 600
+        }),
+        diceLayer = new Kinetic.Layer(),
+        dice = [],
+        handDescription,
+        playerInfo,
+        passInfo,
+        elementsLayer;
 
-    var layer = new Kinetic.Layer();
+    this.setUpElements = function(hand) {
+        elementsLayer = new Kinetic.Layer();
+        handDescription = new Kinetic.Text({
+            y: 200,
+            text: 'You have ' + HandTextView.getDescription(hand) + '.',
+            fontSize: 20,
+            fill: 'black'
+        });
+        var tiltButton = new Kinetic.Group({
+                y: 150,
+            }),
+            tiltButtonShape = new Kinetic.Rect({
+                width: 50,
+                height: 30,
+                fill: 'green',
+                cornerRadius: 3
+            }),
+            tiltButtonText = new Kinetic.Text({
+                x: tiltButtonShape.getWidth() / 8,
+                y: tiltButtonShape.getHeight() / 3,
+                text: 'Tilt Cup',
+                fill: 'black'
+            });
 
+        tiltButton.add(tiltButtonShape);
+        tiltButton.add(tiltButtonText);
+        tiltButton.on('mouseover', function() {
+            document.body.style.cursor = 'pointer';
+            tiltButtonShape.setFill('blue');
+            elementsLayer.draw();
+        });
+        tiltButton.on('mouseout', function() {
+            document.body.style.cursor = 'default';
+            tiltButtonShape.setFill('green');
+            elementsLayer.draw();
+        });
+        var liftButton = new Kinetic.Group({
+                x: 70,
+                y: 150,
+            }),
+            liftButtonShape = new Kinetic.Rect({
+                width: 50,
+                height: 30,
+                fill: 'green',
+                cornerRadius: 3
+            }),
+            liftButtonText = new Kinetic.Text({
+                x: liftButtonShape.getWidth() / 8,
+                y: liftButtonShape.getHeight() / 3,
+                text: 'Lift Cup',
+                fill: 'black'
+            });
+
+        liftButton.add(liftButtonShape);
+        liftButton.add(liftButtonText);
+        liftButton.on('mouseover', function() {
+            document.body.style.cursor = 'pointer';
+            liftButtonShape.setFill('blue');
+            elementsLayer.draw();
+        });
+        liftButton.on('mouseout', function() {
+            document.body.style.cursor = 'default';
+            liftButtonShape.setFill('green');
+            elementsLayer.draw();
+        });
+        var passButton = new Kinetic.Group({
+                y: 110,
+            }),
+            passButtonShape = new Kinetic.Rect({
+                width: 60,
+                height: 30,
+                fill: 'green',
+                cornerRadius: 3
+            }),
+            passButtonText = new Kinetic.Text({
+                x: passButtonShape.getWidth() / 8,
+                y: passButtonShape.getHeight() / 3,
+                text: 'Pass as is',
+                fill: 'black'
+            });
+
+        passButton.add(passButtonShape);
+        passButton.add(passButtonText);
+        passButton.on('mouseover', function() {
+            document.body.style.cursor = 'pointer';
+            passButtonShape.setFill('blue');
+            elementsLayer.draw();
+        });
+        passButton.on('mouseout', function() {
+            document.body.style.cursor = 'default';
+            passButtonShape.setFill('green');
+            elementsLayer.draw();
+        });
+        passButton.on('click', function() {
+            self.publish('pass');
+        });
+        playerInfo = new Kinetic.Text({
+            fill: 'black'
+        });
+        passInfo = new Kinetic.Text({
+            y: 220,
+            fill: 'black'
+        });
+        var cup = new Kinetic.Group({
+                y: 300,
+                draggable: true
+            });
+            cupUpper = new Kinetic.Rect({
+                width: 150,
+                height: 40,
+                fill: 'black',
+                fillPatternX: 1,
+                cornerRadius: 10
+            }),
+            cupMiddle = new Kinetic.Rect({
+                x: 10,
+                y: cupUpper.getHeight(),
+                width: 130,
+                height: 130,
+                fill: 'black'
+            }),
+            cupBottom = new Kinetic.Rect({
+                y: cupMiddle.getY() + cupMiddle.getHeight(),
+                width: 150,
+                height: 30,
+                fill: 'black',
+                cornerRadius: 3
+            });
+        cup.add(cupUpper);
+        cup.add(cupMiddle);
+        cup.add(cupBottom);
+        elementsLayer.add(cup);
+        elementsLayer.add(tiltButton);
+        elementsLayer.add(liftButton);
+        elementsLayer.add(passButton);
+        elementsLayer.add(handDescription);
+        elementsLayer.add(playerInfo);
+        elementsLayer.add(passInfo);
+        stage.add(elementsLayer);
+
+        // Element functions
+        tiltButton.on('click', function() {
+            self.publish('tilt');
+        });
+        liftButton.on('click', function() {
+            self.publish('lift');
+        });
+        self.createDice(hand);
+    };
     this.createDie = function(sideFacingUp) {
-        var die= new Kinetic.Group();
+        var die = new Kinetic.Group({
+            draggable: true
+        });
         var dieShape = new Kinetic.Rect({
             width: 50,
             height: 50,
             fill: '#ffefdb',
-            cornerRadius: 5
+            stroke: '#a6a7a9',
+            strokeWidth: 2,
+            cornerRadius: 5,
         });
         var dieText = new Kinetic.Text({
-            x: 50,
-            y: 50,
+            x: 15,
+            y: 10,
+            fontSize: 30,
+            fontFamily: 'Calibri',
             text: HandTextView.sideNames[sideFacingUp],
-            textFill: 'black'
+            fill: 'black'
         });
         die.add(dieShape);
         die.add(dieText);
@@ -296,40 +455,23 @@ function View() {
     this.createDice = function(hand) {
         for (var dieNum = 0; dieNum < hand.length; dieNum++) {
             var die = self.createDie(hand[dieNum].sideFacingUp);
+            die.timeToShow = hand[dieNum].isUnderCup ? 'middleofturn' : null;
             die.setX(dieNum * 60);
             die.setY(50);
             die.id = dieNum;
-            layer.add(die);
+            die.on('click', function() {
+                self.publish('roll', this.id);
+            });
+            die.on('mouseover', function() {
+                document.body.style.cursor = 'pointer';
+            });
+            die.on('mouseout', function() {
+                document.body.style.cursor = 'default';
+            });
+            diceLayer.add(die);
+            dice.push(die);
         }
-        stage.add(layer);
-        $('#dice-container').children().click(function() {
-            if ($(this).hasClass('noclick')) { // prevent roll if die has been dragged
-                $(this).removeClass('noclick');
-            } else {
-                var dieNum = $(this).index();
-                publish('roll', dieNum);
-            }
-        });
-        $('.die').draggable({
-            start: function(event, ui) {
-                $(this).addClass('noclick');
-            },
-            revert : function(event) { return !event; }
-        });
-        $('#cup').draggable().droppable({
-            drop: function(event, ui) {
-                var dieNum = $(this).index();
-                publish('put-in-cup', dieNum);
-                 $('#dice-container:nth-child(' + dieNum + ')').addClass('middle');
-            }
-        });
-        $('#dice-container').droppable({
-            drop: function(event, ui) {
-                var dieNum = $(this).index();
-                publish('take-out-of-cup', dieNum);
-                $('#dice-container:nth-child(' + dieNum + ')').removeClass('middle');
-            }
-        });
+        stage.add(diceLayer);
     };
     this.show = function(state) {
         var states = ['beginning', 'middle'];
@@ -339,17 +481,23 @@ function View() {
     };
     this.updateDice = function(hand) {
         for (var dieNum = 0; dieNum < hand.length; dieNum++) {
-            $('#die' + dieNum).text(HandTextView.sideNames[hand[dieNum].sideFacingUp]);
+            var dieText = diceLayer.children[dieNum].children[1];
+            var newText = HandTextView.sideNames[hand[dieNum].sideFacingUp];
+            dieText.setText(newText);
+            diceLayer.draw();
         }
     };
     this.displayHandDescription = function(hand) {
-        $('#handname-display').text('You have ' + HandTextView.getDescription(hand));
+        handDescription.setText('You have ' + HandTextView.getDescription(hand));
+        elementsLayer.draw();
     };
     this.displayCurrentPlayer = function(currentPlayer) {
-        $('#player-info').text("Player " + currentPlayer + "'s turn");
+        playerInfo.setText("Player " + currentPlayer + "'s turn");
+        elementsLayer.draw();
     };
     this.displayPassedHand = function(previousPlayer, passedHand) {
-        $('#pass-info').text('Player ' + previousPlayer + ' passed you ' + HandTextView.getDescription(passedHand) + '.');
+        passInfo.setText('Player ' + previousPlayer + ' passed you ' + HandTextView.getDescription(passedHand) + '.');
+        elementsLayer.draw();
     };
     this.displayBluff = function(hand) {
         if (hand !== undefined && hand.length >= 2 && HandTextView.getDescription(hand) != 'nothing') {
@@ -358,9 +506,6 @@ function View() {
             $('#pass-display').text('');
         }
     };
-    $('#pass').click(function() {
-        self.publish('pass');
-    });
     $('#pass-bluff').click(function() {
         $('#pass-creator').toggle();
     });
@@ -372,12 +517,6 @@ function View() {
     });
     $('#clear').click(function() {
         self.publish('clear');
-    });
-    $('#tilt').click(function() {
-        self.publish('tilt');
-    });
-    $('#lift').click(function() {
-        self.publish('lift');
     });
 }
 
