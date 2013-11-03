@@ -267,28 +267,32 @@ function GameController(numPlayers) {
 
 function View() {
     var self = this,
-        stage = new Kinetic.Stage({
-            container: 'container',
-            width: 600,
-            height: 600
-        }),
-        diceLayer = new Kinetic.Layer(),
-        dice = [],
+        stage,
         handDescription,
         playerInfo,
         passInfo,
+        diceLayer,
         elementsLayer;
 
     this.setUpElements = function(hand) {
+        stage = new Kinetic.Stage({
+            container: 'container',
+            width: 650,
+            height: 500
+        });
+        diceLayer = new Kinetic.Layer();
         elementsLayer = new Kinetic.Layer();
+        self.createDice(hand);
         handDescription = new Kinetic.Text({
-            y: 200,
+            x: stage.getWidth() / 2,
+            y: 350,
             text: 'You have ' + HandTextView.getDescription(hand) + '.',
             fontSize: 20,
             fill: 'black'
         });
         var tiltButton = new Kinetic.Group({
-                y: 150,
+                x: 200,
+                y: 450,
             }),
             tiltButtonShape = new Kinetic.Rect({
                 width: 50,
@@ -316,8 +320,8 @@ function View() {
             elementsLayer.draw();
         });
         var liftButton = new Kinetic.Group({
-                x: 70,
-                y: 150,
+                x: 270,
+                y: 450,
             }),
             liftButtonShape = new Kinetic.Rect({
                 width: 50,
@@ -345,11 +349,12 @@ function View() {
             elementsLayer.draw();
         });
         var passButton = new Kinetic.Group({
-                y: 110,
+                x: 200,
+                y: 380,
             }),
             passButtonShape = new Kinetic.Rect({
-                width: 60,
-                height: 30,
+                width: 80,
+                height: 40,
                 fill: 'green',
                 cornerRadius: 3
             }),
@@ -357,6 +362,7 @@ function View() {
                 x: passButtonShape.getWidth() / 8,
                 y: passButtonShape.getHeight() / 3,
                 text: 'Pass as is',
+                fontSize: 16,
                 fill: 'black'
             });
 
@@ -375,22 +381,62 @@ function View() {
         passButton.on('click', function() {
             self.publish('pass');
         });
+        var createPassButton = new Kinetic.Group({
+                x: 300,
+                y: 380,
+            }),
+            createPassButtonShape = new Kinetic.Rect({
+                width: 90,
+                height: 40,
+                fill: 'green',
+                cornerRadius: 3
+            }),
+            createPassButtonText = new Kinetic.Text({
+                x: createPassButtonShape.getWidth() / 8,
+                y: createPassButtonShape.getHeight() / 3,
+                text: 'Create pass',
+                fontSize: 16,
+                fill: 'black'
+            });
+
+        createPassButton.add(createPassButtonShape);
+        createPassButton.add(createPassButtonText);
+        createPassButton.on('mouseover', function() {
+            document.body.style.cursor = 'pointer';
+            createPassButtonShape.setFill('blue');
+            elementsLayer.draw();
+        });
+        createPassButton.on('mouseout', function() {
+            document.body.style.cursor = 'default';
+            createPassButtonShape.setFill('green');
+            elementsLayer.draw();
+        });
+        createPassButton.on('click', function() {
+            self.publish('pass');
+        });
         playerInfo = new Kinetic.Text({
+            x: stage.getWidth() / 2,
+            y: 5,
+            fontSize: 22,
             fill: 'black'
         });
         passInfo = new Kinetic.Text({
-            y: 220,
+            x: stage.getWidth() / 2,
+            y: 430,
+            fontSize: 18,
             fill: 'black'
         });
         var cup = new Kinetic.Group({
-                y: 300,
+                x: stage.getWidth() / 2,
+                y: 50,
                 draggable: true
             });
             cupUpper = new Kinetic.Rect({
                 width: 150,
                 height: 40,
-                fill: 'black',
-                fillPatternX: 1,
+                fillLinearGradientStartPoint: [-45, 0],
+                fillLinearGradientEndPoint: [190, 0],
+                fillLinearGradientColorStops: [0, 'gray', 0.5, 'black', 1, 'gray'],
                 cornerRadius: 10
             }),
             cupMiddle = new Kinetic.Rect({
@@ -398,22 +444,33 @@ function View() {
                 y: cupUpper.getHeight(),
                 width: 130,
                 height: 130,
-                fill: 'black'
+                fillLinearGradientStartPoint: [-40, 0],
+                fillLinearGradientEndPoint: [165, 0],
+                fillLinearGradientColorStops: [0, 'gray', 0.5, 'black', 1, 'gray'],
             }),
             cupBottom = new Kinetic.Rect({
                 y: cupMiddle.getY() + cupMiddle.getHeight(),
                 width: 150,
                 height: 30,
-                fill: 'black',
+                fillLinearGradientStartPoint: [-45, 0],
+                fillLinearGradientEndPoint: [190, 0],
+                fillLinearGradientColorStops: [0, 'gray', 0.5, 'black', 1, 'gray'],
                 cornerRadius: 3
             });
         cup.add(cupUpper);
         cup.add(cupMiddle);
         cup.add(cupBottom);
+        cup.setOffset({
+            x: cupUpper.getWidth() / 2
+        });
+        cupUpper.on('mousedown', function(event) {
+            //cup.setRotation(Math.asin(cup.getX() - event.clientX));
+        });
         elementsLayer.add(cup);
         elementsLayer.add(tiltButton);
         elementsLayer.add(liftButton);
         elementsLayer.add(passButton);
+        elementsLayer.add(createPassButton);
         elementsLayer.add(handDescription);
         elementsLayer.add(playerInfo);
         elementsLayer.add(passInfo);
@@ -426,27 +483,30 @@ function View() {
         liftButton.on('click', function() {
             self.publish('lift');
         });
-        self.createDice(hand);
     };
     this.createDie = function(sideFacingUp) {
         var die = new Kinetic.Group({
             draggable: true
         });
         var dieShape = new Kinetic.Rect({
-            width: 50,
-            height: 50,
+            width: 40,
+            height: 40,
             fill: '#ffefdb',
             stroke: '#a6a7a9',
             strokeWidth: 2,
             cornerRadius: 5,
         });
         var dieText = new Kinetic.Text({
-            x: 15,
-            y: 10,
-            fontSize: 30,
+            x: dieShape.getWidth() / 2,
+            y: dieShape.getHeight() / 2,
+            fontSize: 22,
             fontFamily: 'Calibri',
             text: HandTextView.sideNames[sideFacingUp],
             fill: 'black'
+        });
+        dieText.setOffset({
+            x: dieText.getWidth() / 2,
+            y: dieText.getHeight() / 2
         });
         die.add(dieShape);
         die.add(dieText);
@@ -456,8 +516,8 @@ function View() {
         for (var dieNum = 0; dieNum < hand.length; dieNum++) {
             var die = self.createDie(hand[dieNum].sideFacingUp);
             die.timeToShow = hand[dieNum].isUnderCup ? 'middleofturn' : null;
-            die.setX(dieNum * 60);
-            die.setY(50);
+            die.setX(200 + dieNum * 50);
+            die.setY(290);
             die.id = dieNum;
             die.on('click', function() {
                 self.publish('roll', this.id);
@@ -469,7 +529,6 @@ function View() {
                 document.body.style.cursor = 'default';
             });
             diceLayer.add(die);
-            dice.push(die);
         }
         stage.add(diceLayer);
     };
@@ -489,14 +548,23 @@ function View() {
     };
     this.displayHandDescription = function(hand) {
         handDescription.setText('You have ' + HandTextView.getDescription(hand));
+        handDescription.setOffset({
+            x: handDescription.getWidth() / 2
+        });
         elementsLayer.draw();
     };
     this.displayCurrentPlayer = function(currentPlayer) {
         playerInfo.setText("Player " + currentPlayer + "'s turn");
+        playerInfo.setOffset({
+            x: playerInfo.getWidth() / 2
+        });
         elementsLayer.draw();
     };
     this.displayPassedHand = function(previousPlayer, passedHand) {
         passInfo.setText('Player ' + previousPlayer + ' passed you ' + HandTextView.getDescription(passedHand) + '.');
+        passInfo.setOffset({
+            x: passInfo.getWidth() / 2
+        });
         elementsLayer.draw();
     };
     this.displayBluff = function(hand) {
