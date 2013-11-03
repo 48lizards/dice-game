@@ -7,42 +7,13 @@
         <link rel="shortcut icon" href="http://locodice.com/wp-content/uploads/2013/05/favicon.gif">
     </head>
     <body>
-        <div id="player-info"></div>
-        <div id="container">
-            <div id="cup"></div>
-            <div id="dice-and-book">
-                <div id="dice-container"></div>
-                <img id="book" src="http://www.rainbowresource.com/products/010553.jpg">
-            </div>
-            <div id="pass-info"></div>
-            <div id="for-passing" class="middle">
-                <div id="handname-display"></div>
-                <button id="pass" type="button">Pass as is</button>
-                <button id="pass-bluff" type="button">Create pass</button>
-                <div id="pass-creator">
-                    <div id="bluff-dice">
-                        <button class="side-selector die" id="select-9">9</button>
-                        <button class="side-selector die" id="select-10">10</button>
-                        <button class="side-selector die" id="select-J">J</button>
-                        <button class="side-selector die" id="select-Q">Q</button>
-                        <button class="side-selector die" id="select-K">K</button>
-                        <button class="side-selector die" id="select-A">A</button>
-                    </div>
-                    <div id="pass-display"></div>
-                    <button id="undo">Undo</button>
-                    <button id="clear">Clear</button>
-                    <button id="submit-pass">Submit</button>
-                </div>
-            </div>
-            <div id="believe-it-or-not" class="beginning">
-                <button id="tilt">Tilt Cup</button>
-                <button id="lift">Lift Cup</button>
-            </div>
-        </div>
-    <script src="lib/jquery-1.10.2.js"></script>
-    <script src="lib/jquery-ui.js"></script>
-    <script src="lib/state-machine.js"></script>
-    <script src="dice.js"></script>
+        <h1>Dice</h1>
+        <div id="container"></div>
+        <script src="lib/jquery-1.10.2.js"></script>
+        <script src="lib/jquery-ui.js"></script>
+        <script src="lib/state-machine.js"></script>
+        <script src="http://d3lp1msu2r81bx.cloudfront.net/kjs/js/lib/kinetic-v4.7.2.min.js"></script>
+        <script src="dice.js"></script>
     </body>
 </html>
 
